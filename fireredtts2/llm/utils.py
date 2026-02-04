@@ -186,6 +186,68 @@ additional_special_tokens = [
     "<|paralinguistic_extra13|>",
 ]
 
+ARPABET_PHONE_SUPERSET = [
+    # -------------------------
+    # CMU consonants (24)
+    # -------------------------
+    "B", "CH", "D", "DH", "F", "G", "HH", "JH", "K", "L",
+    "M", "N", "NG", "P", "R", "S", "SH", "T", "TH", "V",
+    "W", "Y", "Z", "ZH",
+
+    # -------------------------
+    # CMU bare vowels (15)
+    # -------------------------
+    "AA", "AE", "AH", "AO", "AW", "AY",
+    "EH", "ER", "EY",
+    "IH", "IY",
+    "OW", "OY",
+    "UH", "UW",
+
+    # -------------------------
+    # CMU stressed vowels (15 * 3 = 45)
+    # -------------------------
+    "AA0", "AA1", "AA2", "AE0", "AE1", "AE2", "AH0", "AH1", "AH2",
+    "AO0", "AO1", "AO2", "AW0", "AW1", "AW2", "AY0", "AY1", "AY2",
+    "EH0", "EH1", "EH2", "ER0", "ER1", "ER2", "EY0", "EY1", "EY2",
+    "IH0", "IH1", "IH2", "IY0", "IY1", "IY2", "OW0", "OW1", "OW2",
+    "OY0", "OY1", "OY2", "UH0", "UH1", "UH2", "UW0", "UW1", "UW2",
+
+    # -------------------------
+    # Reduced vowels / variants (bare + stressed)
+    # -------------------------
+    "AX", "AX0", "AX1", "AX2",
+    "AXR", "AXR0", "AXR1", "AXR2",
+    "IX", "IX0", "IX1", "IX2",
+    "UX", "UX0", "UX1", "UX2",
+
+    # -------------------------
+    # Syllabics + allophones (common in TIMIT/aligners)
+    # -------------------------
+    "EL", "EM", "EN",
+    "DX", "NX", "Q",
+
+    # -------------------------
+    # TIMIT-specific / common alternates
+    # -------------------------
+    "HV",      # TIMIT "hv" (voiceless HH)
+    "AX-H",    # TIMIT devoiced schwa
+    "ENG",     # TIMIT "eng" (often maps to NG)
+
+    # -------------------------
+    # TIMIT closures
+    # -------------------------
+    "BCL", "DCL", "GCL", "KCL", "PCL", "TCL",
+
+    # -------------------------
+    # Silence / noise markers (varies by tool; include both cases)
+    # -------------------------
+    "H#", "SIL", "SP", "SPN", "PAU", "EPI", "BRTH",
+    "NSN", "LAU", "VOCNOISE", "NOISE",
+    "SPOKEN_NOISE", "MUSIC", "BREATH",
+]
+ARPABET_EXTENDED_SPECIAL_TOKENS = ["<|arpa_start|>"] + [f"<|arpa_{phone}|>" for phone in ARPABET_PHONE_SUPERSET] + ["<|arpa_end|>"]
+additional_special_tokens += ARPABET_EXTENDED_SPECIAL_TOKENS
+
 
 def load_custom_tokenizer(qwen2_tokenizer_path: str):
     tok = AutoTokenizer.from_pretrained(qwen2_tokenizer_path)
@@ -337,3 +399,20 @@ def read_jsonl(path):
         data = json.loads(line)
         data_list.append(data)
     return data_list
+
+
+def convert_snow_arpa_to_special_tokens(arpa_text: str) -> str:
+    """
+    Convert Snow ARPA text to special tokens.
+    Snow ARPA is space separated list of arpabet phones. eg. "HH AH0 L OW1".
+    Its converted to special tokens by wrapping each phone in <|arpa_> tags
+    and wrapping the entire text in <|arpa_start|> and <|arpa_end|> tags.
+    eg. "HH AH0 L OW1" -> "<|arpa_start|><|arpa_HH|><|arpa_AH0|><|arpa_L|><|arpa_OW1|><|arpa_end|>"
+    Args:
+        arpa_text: ARPA text to convert.
+    Returns:
+        snow arpa text represented as special tokens.
+    """
+    tokens = arpa_text.strip().split(" ")
+    tokens = ["<|arpa_start|>"] + [f"<|arpa_{phone}|>" for phone in tokens] + ["<|arpa_end|>"]
+    return "".join(tokens)
