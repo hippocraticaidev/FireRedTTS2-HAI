@@ -379,6 +379,19 @@ class Model(nn.Module, PyTorchModelHubMixin):
 
         assert self.backbone.caches_are_enabled(), "backbone caches are not enabled"
         curr_backbone_mask = _index_causal_mask(self.backbone_causal_mask, input_pos)
+
+        padding_mask = kwargs.get("padding_mask", None)
+        if padding_mask is not None:
+            # padding_mask: (B, L) bool — True for valid KV positions.
+            # Extend or slice to match causal mask width (backbone max_seq_len).
+            w = curr_backbone_mask.size(-1)
+            if padding_mask.size(1) >= w:
+                pm = padding_mask[:, :w]
+            else:
+                pm = torch.ones(b, w, dtype=torch.bool, device=tokens.device)
+                pm[:, : padding_mask.size(1)] = padding_mask
+            curr_backbone_mask = curr_backbone_mask & pm.unsqueeze(1)
+
         embeds = self._embed_tokens(tokens)
         masked_embeds = embeds * tokens_mask.unsqueeze(-1)
         h = masked_embeds.sum(dim=2)
