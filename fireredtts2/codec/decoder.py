@@ -263,7 +263,12 @@ class CausalVocosBackbone(nn.Module):
         # NOTE(sfy): We have no padding in training, so safe for sdpa attention, no Nan.
         # Also, 1 token(12.5Hz) -> 4 latents(50Hz) -> 8 latents(100Hz),
         # so we design a 8 block causal attention mask instead of fully causal to improve performance
-        attention_mask = make_block_causal_mask(x_lens, chunk_size=8)
+        # NOTE(perf): pass max_len explicitly so torch.compile doesn't graph-break
+        # on lengths.max().item() (data-dependent scalar) inside make_pad_mask.
+        # x is (b, t, c) here and has no padding, so x.shape[1] == x_lens.max().
+        attention_mask = make_block_causal_mask(
+            x_lens, max_len=x.shape[1], chunk_size=8
+        )
         for layer in self.transformers:
             x = layer(x, attention_mask)
 
