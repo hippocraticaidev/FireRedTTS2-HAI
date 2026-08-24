@@ -56,6 +56,10 @@ class FireRedTTS2:
 
         # ==== Load Qwen2.5 Text Tokenizer ====
         self._text_tokenizer = load_custom_tokenizer(pretrained_qwen_path)
+        assert self._model.text_embeddings.weight.shape[0] >= len(self._text_tokenizer), (
+            f"Size of the text tokenizer {len(self._text_tokenizer)} is larger than the text embeddings size: {self._model.text_embeddings.weight.shape[0]}"
+            f"To account for the additional tokens in the tokenizer, embeddings must be resized by atleast {len(self._text_tokenizer) - self._model.text_embeddings.weight.shape[0]} tokens"
+        )
         print("[INFO] Text Tokenizer Loaded...")
 
         # ==== Load Torch Audio Tokenizer ====
